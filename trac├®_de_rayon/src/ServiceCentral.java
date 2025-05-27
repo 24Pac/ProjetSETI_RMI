@@ -11,25 +11,36 @@ public class ServiceCentral implements ServiceCalcul {
 
     public synchronized void enregistrerNoeud(ServiceNoeud noeud) throws RemoteException {
         noeuds.add(noeud);
-        System.out.println("Nœud enregistré.");
+        System.out.println("Noeud enregistré.");
     }
 
     public void demanderCalcul(ServiceClient client, String sceneFile, int largeur, int hauteur) throws RemoteException {
         int nbNoeuds = noeuds.size();
+        if (nbNoeuds == 0) {
+            System.out.println("Aucun noeud disponible !");
+            return;
+        }
+
         int hFrag = hauteur / nbNoeuds;
+        int reste = hauteur%nbNoeuds;
 
         for (int i = 0; i < nbNoeuds; i++) {
-            final int idx = i;
+            ServiceNoeud noeud = noeuds.get(i);
+            int y0 = i * hFrag;
+            int h = (i == nbNoeuds - 1) ? (hFrag + reste) : hFrag;
+
             new Thread(() -> {
                 try {
-                    ServiceNoeud noeud = noeuds.get(idx);
-                    int x0 = 0, y0 = idx * hFrag, l = largeur, h = (idx == nbNoeuds-1) ? hauteur - y0 : hFrag;
-                    Image img = noeud.calculerFragment(x0, y0, l, h, sceneFile);
-                    client.recevoirFragment(img, x0, y0);
-                } catch (Exception e) { e.printStackTrace(); }
+                    Image img = noeud.calculerFragment(0, y0, largeur, h, sceneFile, client.getLargeur(), client.getHauteur());
+                    client.recevoirFragment(img, 0, y0);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }).start();
         }
     }
+
+
 
     public static void main(String[] args) throws Exception {
         ServiceCentral svc = new ServiceCentral();
